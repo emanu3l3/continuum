@@ -1,0 +1,18 @@
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# .env 
+.env
+
+/files/
+
+# Test coverage
+*.test
+*.out
+
+# IDE
+.vscode/
+.idea/

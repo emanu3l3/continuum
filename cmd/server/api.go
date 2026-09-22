@@ -10,6 +10,7 @@ import (
 	"github.com/emanu3l3/continuum/pkg/upload"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 )
 
 type config struct {
@@ -28,6 +29,14 @@ type application struct {
 func (app *application) mount() http.Handler {
 	r := chi.NewRouter()
 	// middleware
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"*"},
+		AllowedMethods:   []string{"GET", "POST", "PATCH", "OPTIONS"},
+		AllowedHeaders:   []string{"Content-Type"},
+		AllowCredentials: false,
+		MaxAge:           300,
+	}))
+
 	r.Use(middleware.Heartbeat("/ping"))
 	r.Use(middleware.Logger)
 	r.Use(middleware.Timeout(5 * time.Second))

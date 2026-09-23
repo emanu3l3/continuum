@@ -57,4 +57,6 @@ var (
 	ErrRecoverChunks       = errors.New("failed to retrieve chunks")
 	ErrUploadNotFound      = errors.New("upload not found")
 	ErrChunkAlreadyWritten = errors.New("chunk already written")
+
+	ErrMimeType = errors.New("file mime type do not correspond with the file extension provided")
 )

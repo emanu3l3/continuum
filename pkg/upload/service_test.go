@@ -16,7 +16,8 @@ type mockStore struct {
 	CompleteFunc    func(ctx context.Context, upUUID uuid.UUID) error
 	GetMetadataFunc func(ctx context.Context, upUUID uuid.UUID) (*FileMetadata, error)
 	GetStateFunc    func(ctx context.Context, upUUID uuid.UUID, extension string) (*UploadState, error)
-	CloseFunc       func(upUUID uuid.UUID)
+	DeleteFunc      func(ctx context.Context, upUUID uuid.UUID) error
+	CloseFunc       func(ctx context.Context, upUUID uuid.UUID) error
 }
 
 func (s *mockStore) InitUpload(ctx context.Context, upUUID uuid.UUID, f *FileMetadata) error {
@@ -47,7 +48,6 @@ func (s *mockStore) GetMetadata(ctx context.Context, upUUID uuid.UUID) (*FileMet
 	return nil, nil
 }
 
-// CORRETTO: Aggiunto il parametro extension per rispecchiare l'interfaccia usata dalla Service
 func (s *mockStore) GetState(ctx context.Context, upUUID uuid.UUID, extension string) (*UploadState, error) {
 	if s.GetStateFunc != nil {
 		return s.GetStateFunc(ctx, upUUID, extension)
@@ -55,10 +55,20 @@ func (s *mockStore) GetState(ctx context.Context, upUUID uuid.UUID, extension st
 	return nil, nil
 }
 
-func (s *mockStore) Close(upUUID uuid.UUID) {
-	if s.CloseFunc != nil {
-		s.CloseFunc(upUUID)
+func (s *mockStore) Delete(ctx context.Context, upUUID uuid.UUID) error {
+	if s.DeleteFunc != nil {
+		return s.DeleteFunc(ctx, upUUID)
 	}
+
+	return nil
+}
+
+func (s *mockStore) Close(ctx context.Context, upUUID uuid.UUID) error {
+	if s.CloseFunc != nil {
+		return s.CloseFunc(ctx, upUUID)
+	}
+
+	return nil
 }
 
 type mockRegistry struct {

@@ -105,8 +105,11 @@ type Storage interface {
 	// GetState returns a pointer to an UploadState struct containing which and how many chunks have been written.
 	GetState(ctx context.Context, upUUID uuid.UUID, ext string) (*UploadState, error)
 
-	// Close closes/free all upload resources
-	Close(upUUID uuid.UUID)
+	// Delete permanently deletes the upload and all upload-realted files
+	Delete(ctx context.Context, upUUID uuid.UUID) error
+
+	// Close closes all upload-realted files
+	Close(ctx context.Context, upUUID uuid.UUID) error
 }
 
 type UploadRegistry interface {

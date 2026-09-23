@@ -114,7 +114,7 @@ func (s *diskStorage) InitUpload(ctx context.Context, upUUID uuid.UUID, file *up
 	encoder.SetIndent("", "  ")
 	err = encoder.Encode(file)
 	if err != nil {
-		s.Close(upUUID)
+		s.Close(ctx, upUUID)
 		return err
 	}
 
@@ -209,7 +209,7 @@ func (s *diskStorage) Complete(ctx context.Context, upUUID uuid.UUID) error {
 
 	// close all files and remove the upload from the activeUploads map
 	success = true
-	s.Close(upUUID)
+	s.Close(ctx, upUUID)
 
 	// delete state file
 	err = os.Remove(upFiles.fileState.Name())
@@ -282,13 +282,40 @@ func (s *diskStorage) GetState(ctx context.Context, upUUID uuid.UUID, extension 
 	return upState, nil
 }
 
-func (s *diskStorage) Close(upUUID uuid.UUID) {
-	upFiles, err := s.getUploadFiles(upUUID)
-	if err == nil {
-		_ = upFiles.file.Close()
-		_ = upFiles.fileMetadata.Close()
-		_ = upFiles.fileState.Close()
-
-		delete(s.activeUploads, upUUID)
+func (s *diskStorage) Delete(ctx context.Context, upUUID uuid.UUID) error {
+	if err := ctx.Err(); err != nil {
+		return err
 	}
+
+	err := s.Close(ctx, upUUID)
+	if err != nil {
+		return err
+	}
+
+	pathDir := filepath.Join(s.baseFilePath, upUUID.String())
+	err = os.RemoveAll(pathDir)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *diskStorage) Close(ctx context.Context, upUUID uuid.UUID) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	upFiles, err := s.getUploadFiles(upUUID)
+	if err != nil {
+		return err
+	}
+
+	_ = upFiles.file.Close()
+	_ = upFiles.fileMetadata.Close()
+	_ = upFiles.fileState.Close()
+
+	delete(s.activeUploads, upUUID)
+
+	return nil
 }

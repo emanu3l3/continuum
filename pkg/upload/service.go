@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"io"
+	"mime"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -30,14 +33,14 @@ func (s *svc) resetInactivityTimer(upContext *UploadContext, upUUID uuid.UUID) {
 	d := time.Duration(s.maxInMemSeconds) * time.Second
 
 	if upContext.InactivityTimer != nil {
-		if !upContext.InactivityTimer.Stop() {
-		}
-		upContext.InactivityTimer.Reset(d)
-		return
+		upContext.InactivityTimer.Stop()
 	}
 
 	upContext.InactivityTimer = time.AfterFunc(d, func() {
-		s.store.Close(upUUID)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		s.store.Close(ctx, upUUID)
 		s.reg.Remove(upUUID)
 	})
 }
@@ -120,6 +123,36 @@ func (s *svc) ProcessChunk(ctx context.Context, body io.Reader, upUUID uuid.UUID
 	chunkBytes, err := io.ReadAll(reader)
 	if err != nil {
 		return Internal(op, err, "couldn't write the chunk")
+	}
+
+	// check if file magic bytes correspond to the file extension
+	if chunkID == 0 {
+		rawMIME := http.DetectContentType(chunkBytes)
+		parsedMIME, _, err := mime.ParseMediaType(rawMIME)
+		if err != nil {
+			parsedMIME = rawMIME
+		}
+
+		exensions, err := mime.ExtensionsByType(parsedMIME)
+		if err != nil || len(exensions) == 0 {
+			s.reg.Remove(upUUID)
+			s.store.Delete(ctx, upUUID)
+			return BadRequest(op, ErrMimeType)
+		}
+
+		found := false
+		for _, validExt := range exensions {
+			if strings.TrimPrefix(validExt, ".") == upContext.FileMtd.Extension {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			s.reg.Remove(upUUID)
+			s.store.Delete(ctx, upUUID)
+			return BadRequest(op, ErrMimeType)
+		}
 	}
 
 	err = s.store.WriteChunk(ctx, upUUID, chunkID, upContext.FileMtd.ChunkSize, chunkBytes)

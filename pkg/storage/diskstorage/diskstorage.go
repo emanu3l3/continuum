@@ -35,19 +35,20 @@ type diskStorage struct {
 }
 
 func NewDiskStorage(baseFilePath string) *diskStorage {
-
 	return &diskStorage{
 		baseFilePath:  baseFilePath,
 		activeUploads: make(map[uuid.UUID]*uploadFiles),
 	}
 }
 
+// openFilesAndRegister opens and saves the files associated with the upUUID in the activeUploads map
 func (s *diskStorage) openFilesAndRegister(upUUID uuid.UUID, extension string) (*uploadFiles, error) {
-	pathDir := filepath.Join(s.baseFilePath, upUUID.String())
+	strUUID := upUUID.String()
+	pathDir := filepath.Join(s.baseFilePath, strUUID)
 
-	filePath := filepath.Join(pathDir, upUUID.String()+"."+extension)
-	filePathMetadata := filepath.Join(pathDir, upUUID.String()+".json")
-	filePathState := filepath.Join(pathDir, upUUID.String()+".state")
+	filePath := filepath.Join(pathDir, strUUID+"."+extension)
+	filePathMetadata := filepath.Join(pathDir, strUUID+".json")
+	filePathState := filepath.Join(pathDir, strUUID+".state")
 
 	filePointer, err := os.OpenFile(filePath, os.O_CREATE|os.O_RDWR, filePerm)
 	if err != nil {
@@ -80,6 +81,7 @@ func (s *diskStorage) openFilesAndRegister(upUUID uuid.UUID, extension string) (
 	return upFiles, nil
 }
 
+// getUploadFiles retrieves from the activeUploads map the files associated with the upUUID
 func (s *diskStorage) getUploadFiles(upUUID uuid.UUID) (*uploadFiles, error) {
 	s.rw.RLock()
 	upFiles, exists := s.activeUploads[upUUID]
@@ -135,8 +137,10 @@ func (s *diskStorage) WriteChunk(ctx context.Context, upUUID uuid.UUID, chunkID 
 		return err
 	}
 
+	// write the chunkID in the state file
 	s.rw.Lock()
 	defer s.rw.Unlock()
+
 	_, err = fmt.Fprintf(upFiles.fileState, "%d\n", chunkID)
 	if err != nil {
 		return err
@@ -203,7 +207,7 @@ func (s *diskStorage) Complete(ctx context.Context, upUUID uuid.UUID) error {
 		return err
 	}
 
-	// close all files and remove the upload from openFiles
+	// close all files and remove the upload from the activeUploads map
 	success = true
 	s.Close(upUUID)
 

@@ -102,7 +102,7 @@ type Storage interface {
 	// GetMetadata returns a pointer to a FileMetadata struct containing the metadata information.
 	GetMetadata(ctx context.Context, upUUID uuid.UUID) (*FileMetadata, error)
 
-	// GetState retrieves the state of the upload, which and how many chunks have been written.
+	// GetState returns a pointer to an UploadState struct containing which and how many chunks have been written.
 	GetState(ctx context.Context, upUUID uuid.UUID, ext string) (*UploadState, error)
 
 	// Close closes/free all upload resources

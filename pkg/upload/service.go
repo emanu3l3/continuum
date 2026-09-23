@@ -66,6 +66,26 @@ func (s *svc) NewUpload(ctx context.Context, f *FileMetadata) (uuid.UUID, error)
 	return upUUID, nil
 }
 
+func (s *svc) finalizeUpload(ctx context.Context, upContext *UploadContext, upUUID uuid.UUID) error {
+	const op = "finalizeUpload"
+
+	err := s.store.Complete(ctx, upUUID)
+	if err != nil {
+		return Internal(op, err, "couldn't complete the upload")
+	}
+
+	upContext.Rw.Lock()
+	upContext.FileMtd.Completed = true
+	upContext.Rw.Unlock()
+
+	err = s.reg.Remove(upUUID)
+	if err != nil {
+		return Internal(op, err, "couldn't complete the upload")
+	}
+
+	return nil
+}
+
 func (s *svc) ProcessChunk(ctx context.Context, body io.Reader, upUUID uuid.UUID, chunkID int64) error {
 	const op = "ProcessChunk"
 
@@ -125,26 +145,6 @@ func (s *svc) ProcessChunk(ctx context.Context, body io.Reader, upUUID uuid.UUID
 	return nil
 }
 
-func (s *svc) finalizeUpload(ctx context.Context, upContext *UploadContext, upUUID uuid.UUID) error {
-	const op = "finalizeUpload"
-
-	err := s.store.Complete(ctx, upUUID)
-	if err != nil {
-		return Internal(op, err, "couldn't complete the upload")
-	}
-
-	upContext.Rw.Lock()
-	upContext.FileMtd.Completed = true
-	upContext.Rw.Unlock()
-
-	err = s.reg.Remove(upUUID)
-	if err != nil {
-		return Internal(op, err, "couldn't complete the upload")
-	}
-
-	return nil
-}
-
 func (s *svc) ProcessStatus(ctx context.Context, upUUID uuid.UUID) (*UploadStatus, error) {
 	const op = "ProcessStatus"
 
@@ -154,22 +154,22 @@ func (s *svc) ProcessStatus(ctx context.Context, upUUID uuid.UUID) (*UploadStatu
 		return NewUploadStatus(upContext), nil
 	}
 
-	file, err := s.store.GetMetadata(ctx, upUUID)
+	fileMtd, err := s.store.GetMetadata(ctx, upUUID)
 	if err != nil {
 		return nil, NotFound(op, ErrUploadNotFound)
 	}
 
-	if file.Completed {
+	if fileMtd.Completed {
 		return &UploadStatus{
-			FileMtd:       file,
+			FileMtd:       fileMtd,
 			ChunksWritten: []int{},
 		}, nil
 	}
 
-	upCtx := NewUploadContext(file)
+	upCtx := NewUploadContext(fileMtd)
 	defer s.resetInactivityTimer(upCtx, upUUID)
 
-	upState, err := s.store.GetState(ctx, upUUID, file.Extension)
+	upState, err := s.store.GetState(ctx, upUUID, fileMtd.Extension)
 	if err != nil {
 		return nil, Internal(op, err, "couldn't get info about the upload")
 	}

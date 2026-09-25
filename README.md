@@ -26,6 +26,7 @@ Prerequisites: go 1.26 or higher
 git clone https://github.com/emanu3l3/continuum.git
 cd continuum
 cp .env.example .env
+go mod download
 go run ./cmd/server
 ```
 

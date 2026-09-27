@@ -20,7 +20,7 @@ It's designed to ensure fast, fault-tolerant, and network-resilient uploads for 
 | MAX_CHUNK_SIZE_MB     | max size of a single upload chunk, in megabytes (required)                                            |
 | MAX_IN_MEMORY_SECONDS | max seconds an incomplete upload is kept in memory without activity before being discarded (required) |
 
-Prerequisites: go 1.26 or higher
+Prerequisites: go 1.27 or higher
 
 ```bash
 git clone https://github.com/emanu3l3/continuum.git

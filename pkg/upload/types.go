@@ -94,7 +94,7 @@ type Storage interface {
 	InitUpload(ctx context.Context, upUUID uuid.UUID, f *FileMetadata) error
 
 	// WriteChunk writes the chunk data to the file at the offset: chunkID * chunkSize.
-	WriteChunk(ctx context.Context, upUUID uuid.UUID, chunkID int64, chunkSize int64, chunkchunkBytes []byte) error
+	WriteChunk(ctx context.Context, upUUID uuid.UUID, chunkID int64, chunkSize int64, chunkBytes []byte) error
 
 	// Complete set the upload as completed, upadates metadata and closes the resources.
 	Complete(ctx context.Context, upUUID uuid.UUID) error
